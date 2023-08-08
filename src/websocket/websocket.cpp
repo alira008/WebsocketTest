@@ -1,17 +1,19 @@
 #include "websocket.hpp"
+
 #include <iostream>
 
 namespace websocket {
 
 int Websocket::Connect(std::string_view host) {
   std::cout << "Connecting to host: " << host << "\n";
+  host_ = host;
 
   io_context_ = std::make_unique<net::io_context>();
   ioc_strand_ = std::make_unique<net::io_context::strand>(*io_context_);
   resolver_ = std::make_unique<tcp::resolver>(net::make_strand(*io_context_));
 
   resolver_->async_resolve(
-      host, "https", beast::bind_front_handler(&Websocket::OnResolve, this));
+      host_, "https", beast::bind_front_handler(&Websocket::OnResolve, this));
 
   io_context_->run();
   return 1;
@@ -48,7 +50,7 @@ void Websocket::OnTcpConnect(beast::error_code ec,
   boost::ignore_unused(end_point);
 
   if (ec) {
-    std::cout << "Error on connect: " << ec.message() << "\n";
+    std::cout << "Error trying to connect: " << ec.message() << "\n";
     return;
   }
   std::cout << "Successfully made a connection\n";
@@ -62,11 +64,23 @@ void Websocket::OnTcpConnect(beast::error_code ec,
 
 void Websocket::OnSslHandshake(beast::error_code ec) {
   if (ec) {
-    std::cout << "Error on connect: " << ec.message() << "\n";
+    std::cout << "Error making ssl handshake: " << ec.message() << "\n";
     return;
   }
 
   std::cout << "Successfuly made ssl handshake";
+  socket_->async_handshake(
+      host_, "/stream",
+      net::bind_executor(*ioc_strand_, beast::bind_front_handler(
+                                           &Websocket::OnHandshake, this)));
 }
 
-} // namespace websocket
+void Websocket::OnHandshake(beast::error_code ec) {
+  if (ec) {
+    std::cout << "Error making handshake: " << ec.message() << "\n";
+  }
+
+  std::cout << "Made websocket connection\n";
+}
+
+}  // namespace websocket

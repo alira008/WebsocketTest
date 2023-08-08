@@ -1,9 +1,10 @@
-#include "websocket/websocket.hpp"
 #include <iostream>
+
+#include "websocket/websocket.hpp"
 int main() {
   std::cout << "hello world\n";
   websocket::Websocket socket;
-  socket.Connect("www.google.com");
+  socket.Connect("paper-api.alpaca.markets");
 
   return 0;
 }
