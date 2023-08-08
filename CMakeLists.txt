@@ -50,4 +50,5 @@ target_link_libraries(
          concurrentqueue
          readerwriterqueue
          Boost::headers)
-# target_precompile_headers(ameritrade_api PUBLIC include/ameritrade_api/pch.h)
+
+     target_precompile_headers(websocket_test PRIVATE src/pch.hpp)

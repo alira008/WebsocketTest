@@ -1,12 +1,11 @@
-#pragma WEBSOCKET_HPP
+#ifndef WEBSOCKET_HPP
+#define WEBSOCKET_HPP
 
-#include <boost/asio.hpp>
-#include <boost/asio/ssl.hpp>
-#include <boost/beast.hpp>
-#include <boost/beast/ssl.hpp>
-#include <memory>
-#include <string>
-#include <string_view>
+#include <boost/asio/awaitable.hpp>
+#include <boost/asio/use_awaitable.hpp>
+#include <future>
+
+#include "../pch.hpp"
 
 namespace websocket {
 
@@ -20,10 +19,13 @@ class Websocket {
   Websocket() { buffer_.reserve(1024); }
 
   // Attempt to connect to socket
-  int Connect(std::string_view host);
+  void Connect(std::string_view host, std::string_view end_point);
 
-  // Send Message to api
-  int Send(std::string_view message);
+  // Send Message to socket
+  void Send(std::string_view message);
+
+  // Read Message from socket
+  void ReadMessage();
 
  private:
   using tcp = net::ip::tcp;
@@ -36,10 +38,14 @@ class Websocket {
   std::unique_ptr<net::io_context::strand> ioc_strand_;
   beast::flat_buffer buffer_;
   std::string host_;
+  std::string end_point_;
 
+  void OnReadSome(const beast::error_code& ec, std::size_t bytes_written);
   void OnResolve(beast::error_code ec, tcp::resolver::results_type results);
   void OnTcpConnect(beast::error_code, tcp::resolver::endpoint_type);
   void OnSslHandshake(beast::error_code);
   void OnHandshake(beast::error_code);
 };
 }  // namespace websocket
+
+#endif

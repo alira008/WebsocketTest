@@ -1,10 +1,11 @@
-#include <iostream>
-
-#include "websocket/websocket.hpp"
+#include "pch.hpp"
+// #include "websocket/websocket.hpp"
+#include "websocket.hpp"
 int main() {
-  std::cout << "hello world\n";
-  websocket::Websocket socket;
-  socket.Connect("paper-api.alpaca.markets");
+  websocket_test::Websocket ws;
+  ws.Connect("stream.data.sandbox.alpaca.markets", "/v2/iex");
+  // // socket.Send("hello");
+  // socket.ReadMessage();
 
   return 0;
 }

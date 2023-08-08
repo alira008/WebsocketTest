@@ -1,12 +1,11 @@
 #include "websocket.hpp"
 
-#include <iostream>
-
 namespace websocket {
 
-int Websocket::Connect(std::string_view host) {
-  std::cout << "Connecting to host: " << host << "\n";
+void Websocket::Connect(std::string_view host, std::string_view end_point) {
+  fmt::print("Connecting to host: {}{}\n", host, end_point);
   host_ = host;
+  end_point_ = end_point;
 
   io_context_ = std::make_unique<net::io_context>();
   ioc_strand_ = std::make_unique<net::io_context::strand>(*io_context_);
@@ -16,19 +15,59 @@ int Websocket::Connect(std::string_view host) {
       host_, "https", beast::bind_front_handler(&Websocket::OnResolve, this));
 
   io_context_->run();
-  return 1;
 }
 
-int Websocket::Send(std::string_view message) {
-  std::cout << "Sending message: " << message << "\n";
+void Websocket::Send(std::string_view message) {
+  fmt::print("Sending message: {}\n", message);
 
-  return 1;
+  socket_->async_write(
+      net::buffer(message),
+      net::bind_executor(*ioc_strand_, [](beast::error_code ec,
+                                          std::size_t bytes_transferred) {
+        boost::ignore_unused(bytes_transferred);
+
+        if (ec) {
+          fmt::print(stderr, "Error on send: {}\n", ec.message());
+          return;
+        }
+
+        fmt::print("Sent: {} bytes\n", bytes_transferred);
+      }));
+
+  io_context_->run();
+  io_context_->reset();
+}
+
+void Websocket::ReadMessage() {
+  buffer_.consume(buffer_.size());
+  // auto resolver = net::use_awaitable.as_default_on(
+  //     tcp::resolver(co_await net::this_coro::executor));
+  // auto ws = net::use_awaitable.as_default_on(
+  //     websockets::stream<beast::tcp_stream>(co_await net::this_coro::executor));
+  // co_await socket_->async_read(buffer_);
+  // co_await ws.async_read_some(
+  //     buffer_, 1024, net::use_awaitable);
+
+  // socket_->async_read(
+  //     buffer_,
+  //       beast::bind_front_handler(&Websocket::OnReadSome, this));
+
+  io_context_->run();
+  io_context_->reset();
+}
+
+void Websocket::OnReadSome(const beast::error_code& ec,
+                           std::size_t bytes_written) {
+  if (ec) {
+    fmt::print(stderr, "Could not read bytes.");
+  }
+  fmt::print("Bytes written: {}\n", bytes_written);
 }
 
 void Websocket::OnResolve(beast::error_code ec,
                           tcp::resolver::results_type results) {
   if (ec) {
-    std::cout << "Could not resolve host\n";
+    fmt::print(stderr, "Could not resolve host\n");
     return;
   }
 
@@ -50,10 +89,20 @@ void Websocket::OnTcpConnect(beast::error_code ec,
   boost::ignore_unused(end_point);
 
   if (ec) {
-    std::cout << "Error trying to connect: " << ec.message() << "\n";
+    fmt::print(stderr, "Error trying to connect: {}\n", ec.message());
     return;
   }
-  std::cout << "Successfully made a connection\n";
+
+  // Set SNI Hostname
+  if (!SSL_set_tlsext_host_name(socket_->next_layer().native_handle(),
+                                host_.c_str())) {
+    ec = beast::error_code(static_cast<int>(::ERR_get_error()),
+                           net::error::get_ssl_category());
+    return;
+  }
+
+  // Set port in host
+  host_ += ':' + std::to_string(end_point.port());
 
   //  Perform the ssl handshake
   socket_->next_layer().async_handshake(
@@ -64,23 +113,22 @@ void Websocket::OnTcpConnect(beast::error_code ec,
 
 void Websocket::OnSslHandshake(beast::error_code ec) {
   if (ec) {
-    std::cout << "Error making ssl handshake: " << ec.message() << "\n";
+    fmt::print(stderr, "Error making ssl handshake: {}\n", ec.message());
     return;
   }
 
-  std::cout << "Successfuly made ssl handshake";
   socket_->async_handshake(
-      host_, "/stream",
+      host_, end_point_,
       net::bind_executor(*ioc_strand_, beast::bind_front_handler(
                                            &Websocket::OnHandshake, this)));
 }
 
 void Websocket::OnHandshake(beast::error_code ec) {
   if (ec) {
-    std::cout << "Error making handshake: " << ec.message() << "\n";
+    fmt::print(stderr, "Error making handshake: {}\n", ec.message());
   }
 
-  std::cout << "Made websocket connection\n";
+  fmt::print("Connected to websocket\n");
 }
 
 }  // namespace websocket
