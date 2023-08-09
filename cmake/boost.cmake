@@ -5,4 +5,6 @@
 find_package(Boost REQUIRED)
 if(NOT Boost_FOUND)
   message(FATAL_ERROR "Boost library not found!!")
+else()
+  message("Boost library: ${Boost_INCLUDE_DIRS}")
 endif()

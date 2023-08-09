@@ -1,11 +1,19 @@
 #include "pch.hpp"
-// #include "websocket/websocket.hpp"
 #include "websocket.hpp"
+
 int main() {
-  websocket_test::Websocket ws;
+  fmt::print("hello world\n");
+  websocket_test::Websocket ws(true);
   ws.Connect("stream.data.sandbox.alpaca.markets", "/v2/iex");
-  // // socket.Send("hello");
-  // socket.ReadMessage();
+  // ws.ReadMessage();
+  ws.SendMessage(
+      "{\"action\":\"auth\",\"key\":\"\","
+      "\"secret\":\"\"}");
+  // ws.ReadMessages();
+  ws.SendMessage(
+      "{\"action\":\"subscribe\",\"trades\":[\"AAPL\"],\"quotes\":[\"AMD\","
+      "\"CLDR\"],\"bars\":[\"*\"]}");
+  ws.ReadMessages();
 
   return 0;
 }

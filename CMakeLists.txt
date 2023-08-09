@@ -14,8 +14,7 @@ endif()
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS ON)
-set(CMAKE_CXX_FLAGS
-    "-std=gnuc++2b -stdlib=libc++ -IC:/msys64/clang64/include/c++/v1")
+# set(CMAKE_CXX_FLAGS "-std=gnu++2b")
 set(CMAKE_CXX_FLAGS_DEBUG
     "${CMAKE_CXX_FLAGS_DEBUG} -g3 -Wall -Wextra -O1 -Wformat=2")
 set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O3")
@@ -37,18 +36,18 @@ file(GLOB_RECURSE LIB_HEADER_FILES "include/*.h" "src/*.h" "include/*.hpp"
      "src/*.hpp")
 file(GLOB_RECURSE LIB_SOURCE_FILES "include/*.cpp" "src/*.cpp")
 
-add_executable(websocket_test ${LIB_HEADER_FILES} ${LIB_SOURCE_FILES})
-
+add_executable(websocket_test ${LIB_SOURCE_FILES})
+target_include_directories(websocket_test PUBLIC ${Boost_INCLUDE_DIRS})
 target_link_libraries(
   websocket_test
-  PUBLIC cpr::cpr
-         simdjson
-         OpenSSL::SSL
-         fmt::fmt
-         OpenSSL::Crypto
-         nlohmann_json::nlohmann_json
-         concurrentqueue
-         readerwriterqueue
-         Boost::headers)
-
-     target_precompile_headers(websocket_test PRIVATE src/pch.hpp)
+  PRIVATE cpr::cpr
+          simdjson
+          OpenSSL::SSL
+          fmt::fmt
+          OpenSSL::Crypto
+          nlohmann_json::nlohmann_json
+          concurrentqueue
+          readerwriterqueue
+          Boost::headers
+          ${Boost_LIBRARIES})
+target_precompile_headers(websocket_test PRIVATE src/pch.hpp)
