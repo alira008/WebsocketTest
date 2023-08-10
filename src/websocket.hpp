@@ -1,5 +1,6 @@
-#include "pch.hpp"
 #include "allocator.hpp"
+#include "message.hpp"
+#include "pch.hpp"
 
 namespace websocket_test {
 
@@ -10,8 +11,8 @@ namespace ssl = net::ssl;
 
 class Websocket {
  public:
-  explicit Websocket(bool is_secure = false) {
-    connection_state_ = ConnectionState::kInitial;
+  explicit Websocket(MessageHandler message_handler, bool is_secure = false)
+      : message_handler_(message_handler) {
     service_ = is_secure ? "https" : "http";
   }
 
@@ -27,16 +28,6 @@ class Websocket {
   // Read Messages from socket
   void ReadMessages();
 
-  enum ConnectionState {
-    kInitial,
-    kResolving,
-    kConnectingTcp,
-    kSslHandshake,
-    kUpgradeWs,
-    kConnected,
-    kError
-  };
-
  private:
   using tcp = net::ip::tcp;
   using stream = websockets::stream<beast::ssl_stream<beast::tcp_stream>>;
@@ -45,18 +36,30 @@ class Websocket {
   std::unique_ptr<ssl::context> ssl_context_;
   std::unique_ptr<stream> socket_;
   tcp::resolver::results_type results_;
-  ConnectionState connection_state_;
   std::string host_;
   std::string host_end_point_;
   std::string service_;
   std::array<char, 800000> buf_;
   MemoryHandler memory_handler_;
+  MessageHandler message_handler_;
 
   net::awaitable<void> ConnectToServer();
   net::awaitable<void> WebsocketStateStep();
   net::awaitable<void> Send(std::string_view message);
   net::awaitable<void> ReadSingle();
   net::awaitable<void> Read();
+};
+
+struct ManualTimer {
+  std::chrono::time_point<std::chrono::high_resolution_clock> start;
+  std::chrono::time_point<std::chrono::high_resolution_clock> stop;
+  ManualTimer() { start = std::chrono::high_resolution_clock::now(); }
+  void Stop() { stop = std::chrono::high_resolution_clock::now(); }
+  void Print(const char* msg = "") {
+    using std::chrono::microseconds;
+    auto duration = duration_cast<microseconds>(stop - start);
+    fmt::print("{}{}\n", msg, duration);
+  }
 };
 
 }  // namespace websocket_test
