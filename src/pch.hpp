@@ -2,9 +2,12 @@
 #include <iostream>
 #include <memory>
 #include <array>
+#include <vector>
 #include <type_traits>
 #include <string>
 #include <string_view>
+#include <span>
+#include <functional>
 
 //  External libraries
 #include <cpr/cpr.h>
@@ -22,4 +25,4 @@
 #include "boost/asio/ssl.hpp"
 #include "boost/beast.hpp"
 #include "boost/beast/ssl.hpp"
-// #include "nlohmann/json.hpp"
+#include "nlohmann/json.hpp"
