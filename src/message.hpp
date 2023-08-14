@@ -1,5 +1,5 @@
-#ifndef MESSAGE_HPP
-#define MESSAGE_HPP
+#pragma once
+
 #include "pch.hpp"
 
 namespace websocket_test {
@@ -10,5 +10,3 @@ struct MessageHandler {
   std::function<void(std::span<const char>)> OnMessage;
 };
 }  // namespace websocket_test
-
-#endif

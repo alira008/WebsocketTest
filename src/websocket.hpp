@@ -1,3 +1,5 @@
+#pragma once
+
 #include "allocator.hpp"
 #include "message.hpp"
 #include "pch.hpp"
