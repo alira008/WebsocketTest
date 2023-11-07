@@ -2,10 +2,6 @@
 #include "pch.hpp"
 #include "websocket.hpp"
 
-void handleMessage(std::span<const char> message) {
-  fmt::print("Received bytes: {}\n", message.size());
-}
-
 std::map<std::string, std::string> load_env(const std::string& filename) {
   std::map<std::string, std::string> env_vars;
   std::ifstream file(filename);
@@ -29,22 +25,29 @@ int main() {
   std::string api_key = env_vars["API_KEY"];
   std::string secret = env_vars["SECRET"];
 
-  websocket_test::MessageHandler message_handler(handleMessage);
-  websocket_test::Websocket ws(message_handler, true);
-  ws.Connect("stream.data.alpaca.markets", "/v2/iex");
-  // ws.ReadMessage();
-  nlohmann::json authMessage;
-  authMessage["action"] = "auth";
-  authMessage["key"] = api_key;
-  authMessage["secret"] = secret;
+  boost::asio::io_context io_context;
+  auto ssl_context =
+      boost::asio::ssl::context(boost::asio::ssl::context::tlsv12_client);
 
-  nlohmann::json subscribeMessage;
-  subscribeMessage["action"] = "subscribe";
-  subscribeMessage["quotes"] = {"AAL"};
+  boost::asio::signal_set signals(io_context, SIGINT, SIGTERM);
+  signals.async_wait([&](auto, auto) { io_context.stop(); });
 
-  ws.SendMessage(authMessage.dump());
-  ws.SendMessage(subscribeMessage.dump());
-  ws.ReadMessages();
+  new_websocket_test::Websocket ws(io_context, ssl_context);
+  boost::asio::co_spawn(io_context, ws.StartWebsocket(api_key, secret),
+                        [](std::exception_ptr e) {
+                          if (e) {
+                            try {
+                              std::rethrow_exception(e);
+                            } catch (std::exception& e) {
+                              fmt::print(stderr, "Error: {}\n", e.what());
+                            }
+                          }
+                        });
 
-  return 0;
+  // Run the I/O service.
+  io_context.run();
+
+  fmt::print("Program stopped\n");
+
+  return EXIT_SUCCESS;
 }

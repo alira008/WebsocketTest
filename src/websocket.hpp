@@ -1,67 +1,43 @@
-#pragma once
-
-#include "allocator.hpp"
-#include "message.hpp"
 #include "pch.hpp"
 
-namespace websocket_test {
-
-namespace net = boost::asio;
-namespace beast = boost::beast;
-namespace websockets = beast::websocket;
-namespace ssl = net::ssl;
+namespace new_websocket_test {
 
 class Websocket {
  public:
-  explicit Websocket(MessageHandler message_handler, bool is_secure = false)
-      : message_handler_(message_handler) {
-    service_ = is_secure ? "https" : "http";
+  Websocket(boost::asio::io_context& io_context,
+            boost::asio::ssl::context& ssl_context)
+      : io_context_(io_context), ssl_context_(ssl_context) {}
+
+  boost::asio::awaitable<void> Connect(std::string_view host,
+                                       std::string_view endpoint, bool secure);
+  boost::asio::awaitable<void> Send(std::string_view message);
+  boost::asio::awaitable<void> ReadMessage();
+  boost::asio::awaitable<void> ReadMessages();
+  boost::asio::awaitable<void> StartWebsocket(std::string_view api_key,
+                                              std::string_view secret) {
+    co_await Connect("stream.data.alpaca.markets", "/v2/iex", true);
+
+    nlohmann::json authMessage;
+    authMessage["action"] = "auth";
+    authMessage["key"] = api_key;
+    authMessage["secret"] = secret;
+
+    nlohmann::json subscribeMessage;
+    subscribeMessage["action"] = "subscribe";
+    subscribeMessage["quotes"] = {"AAL", "AMZN"};
+
+    co_await Send(authMessage.dump());
+    co_await Send(subscribeMessage.dump());
+    co_await ReadMessages();
   }
-
-  // Attempt to connect to socket
-  void Connect(std::string_view host, std::string_view end_point);
-
-  // Send Message to socket
-  void SendMessage(std::string_view message);
-
-  // Read Message from socket
-  void ReadMessage();
-
-  // Read Messages from socket
-  void ReadMessages();
 
  private:
-  using tcp = net::ip::tcp;
-  using stream = websockets::stream<beast::ssl_stream<beast::tcp_stream>>;
-
-  std::unique_ptr<net::io_context> io_context_;
-  std::unique_ptr<ssl::context> ssl_context_;
-  std::unique_ptr<stream> socket_;
-  tcp::resolver::results_type results_;
-  std::string host_;
-  std::string host_end_point_;
-  std::string service_;
+  boost::asio::io_context& io_context_;
+  boost::asio::ssl::context& ssl_context_;
+  std::unique_ptr<boost::beast::websocket::stream<
+      boost::beast::ssl_stream<boost::beast::tcp_stream>>>
+      ws_;
   std::array<char, 800000> buf_;
-  MemoryHandler memory_handler_;
-  MessageHandler message_handler_;
-
-  net::awaitable<void> ConnectToServer();
-  net::awaitable<void> WebsocketStateStep();
-  net::awaitable<void> Send(std::string_view message);
-  net::awaitable<void> ReadSingle();
-  net::awaitable<void> Read();
 };
 
-struct ManualTimer {
-  std::chrono::time_point<std::chrono::high_resolution_clock> start;
-  std::chrono::time_point<std::chrono::high_resolution_clock> stop;
-  ManualTimer() { start = std::chrono::high_resolution_clock::now(); }
-  void Stop() { stop = std::chrono::high_resolution_clock::now(); }
-  void Print(const char* msg = "") {
-    using std::chrono::microseconds;
-    auto duration = duration_cast<microseconds>(stop - start);
-    fmt::print("{}{}\n", msg, duration);
-  }
-};
-
-}  // namespace websocket_test
+}  // namespace new_websocket_test

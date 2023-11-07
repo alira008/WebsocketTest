@@ -35,7 +35,7 @@ include(cmake/fmt.cmake)
 
 file(GLOB_RECURSE LIB_HEADER_FILES "include/*.h" "src/*.h" "include/*.hpp"
      "src/*.hpp")
-file(GLOB_RECURSE LIB_SOURCE_FILES "include/*.cpp" "src/*.cpp")
+file(GLOB_RECURSE LIB_SOURCE_FILES "include/*.cpp" "src/*.cpp" "src/*.cc")
 
 add_executable(websocket_test ${LIB_SOURCE_FILES} ${LIB_HEADER_FILES})
 target_include_directories(websocket_test PRIVATE ${Boost_INCLUDE_DIRS})
